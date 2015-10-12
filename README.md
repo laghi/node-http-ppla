@@ -1,20 +1,18 @@
 # Node.js HTTP USB PPLA/PPLB Print server
 
-This project aims to create a simple way to use your USB barcode printer via HTTP.
+This project aims to create a simple way to use your USB barcode printer via HTTP, and it was altered by me to become compatible with my ppla-builder component.
 
-This code depends on usblp linux kernel driver to provide /dev/usb/lp0 interface.
+This code depends on usblp linux kernel driver to provide /dev/usb/<printerName> interface (default printer name is lp0 if none is provided).
 
 It was tested with an Argox PPLA USB printer.
 
 Usage is simple:
 
-    node http-ppla.js <authToken>
+    node http-ppla.js <authToken> [printerName]
 
 The server will listen on port 8080.
 
 HTTP Requests must be in this format:
 
-    { base_commands: '0=K1503&1=O0220&2=f320',                // STX commands
-      label_commands: '0=LCommand1&1=LCommand2&2=LCommand3',  // Label formatting commands,
-                                                              // these will be written between L and E commands
-      auth_token: 'authTokenExpectedByServer' }               // the authToken configured in the server
+    { auth_token: 'authTokenExpectedByServer',          // the authToken configured in the server
+      contentToPrint: 'contentToPrint' }                // the content to print, correctly formated in ppla programming language (the ppla-builder component just makes it easier to write it)
