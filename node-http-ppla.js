@@ -1,14 +1,21 @@
 var http = require('http');
 var fs = require('fs');
 var querystring = require('querystring');
+var uuid = require('node-uuid');
+var exec = require('child_process').exec;
+var os = require('os');
+var path = require('path');
+var extension = '.ppla';
 
-var printer = fs.createWriteStream('/dev/usb/lp0');
+var printerName = process.argv[3] || 'lp0';
+var printerPath = '/dev/usb/' + printerName;
+var printer = fs.createWriteStream(printerPath);
 
 printer.on('error', function() {
-    console.log('Error opening /dev/usb/lp0');
+    console.log('Error opening ' + printerPath);
 });
 
-authToken = process.argv[2];
+var authToken = process.argv[2];
 
 var server = http.createServer(function(request, response) {
 
@@ -22,54 +29,15 @@ var server = http.createServer(function(request, response) {
 
         request.addListener("end", function() {
 
-            var postData = querystring.parse(request.content);
-
-            if (('auth_token' in postData) && postData.auth_token == authToken) {
-
-                if (! 'base_commands' in postData) {
-
-                    console.log('No base commands');
+            var postData = JSON.parse(request.content);
+            console.log(postData);
+            if (('auth_token' in postData) && postData.auth_token === authToken) {
+                if (! 'contentToPrint' in postData) {
+                    console.log('No content to print');
                     response.writeHead(500);
                 } else {
-
-                    if (! 'label_commands' in postData) {
-
-                        console.log('No label commands');
-                        response.writeHead(500);
-                    } else {
-
-                        var base_commands = [];
-
-                        var postDataBaseCommands = querystring.parse(postData.base_commands);
-
-                        Object.keys(postDataBaseCommands).forEach(function(key) {
-                            base_commands.push(Buffer.concat([new Buffer([0x02], 'hex'),  new Buffer(postDataBaseCommands[key])]));
-                        });
-
-                        var label_commands = [];
-
-                        var postDataLabelCommands = querystring.parse(postData.label_commands);
-
-                        Object.keys(postDataLabelCommands).forEach(function(key) {
-                            label_commands.push(new Buffer(postDataLabelCommands[key]));
-                        });
-
-                        for (var c in base_commands) {
-                            printer.write(base_commands[c]);
-                            printer.write(new Buffer([0x0D], 'hex')); // <CR>
-                        }
-
-                        for (var c in label_commands) {
-                            printer.write(label_commands[c]);
-                            printer.write(new Buffer([0x0D], 'hex')); // <CR>
-                        }
-
-                        printer.write(new Buffer('Q0001'));       // Quantity
-                        printer.write(new Buffer('E'));           // end label
-                        printer.write(new Buffer([0x0D], 'hex')); // <CR>
-
-                        response.writeHead(200, {"Content-Type": "text/plain"});
-                    }
+                    printer.write(new Buffer(postData.contentToPrint, 'ascii'));
+                    response.writeHead(200, {"Content-Type": "text/plain"});
                 }
             } else {
                 response.writeHead(503, {"Content-Type": "text/plain"});
