@@ -9,11 +9,6 @@ var extension = '.ppla';
 
 var printerName = process.argv[3] || 'lp0';
 var printerPath = '/dev/usb/' + printerName;
-var printer = fs.createWriteStream(printerPath);
-
-printer.on('error', function() {
-    console.log('Error opening ' + printerPath);
-});
 
 var authToken = process.argv[2];
 
@@ -36,7 +31,12 @@ var server = http.createServer(function(request, response) {
                     console.log('No content to print');
                     response.writeHead(500);
                 } else {
+					var printer = fs.createWriteStream(printerPath);
+					printer.on('error', function() {
+						console.log('Error opening ' + printerPath);
+					});
                     printer.write(new Buffer(postData.contentToPrint, 'ascii'));
+					printer.end();
                     response.writeHead(200, {"Content-Type": "text/plain"});
                 }
             } else {
