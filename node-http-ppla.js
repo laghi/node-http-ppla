@@ -9,7 +9,6 @@ var extension = '.ppla';
 
 var printerName = process.argv[3] || 'lp0';
 var printerPath = '/dev/usb/' + printerName;
-
 var authToken = process.argv[2];
 
 var server = http.createServer(function(request, response) {
@@ -30,21 +29,26 @@ var server = http.createServer(function(request, response) {
                 if (! 'contentToPrint' in postData) {
                     console.log('No content to print');
                     response.writeHead(500);
+		    response.end();
                 } else {
-					var printer = fs.createWriteStream(printerPath);
-					printer.on('error', function() {
-						console.log('Error opening ' + printerPath);
-					});
+		    var printer = fs.createWriteStream(printerPath);
+		    printer.on('error', function(error) {
+		        console.log('Error opening ' + printerPath);
+			console.log(error);
+			response.writeHead(500, {"Content-Type": "application/json"});
+                        response.end(JSON.stringify(error));
+		    });
+		    printer.on('finish', function(){ 
+			response.writeHead(200, {"Content-Type": "text/plain"});
+                        response.end();
+		    });
                     printer.write(new Buffer(postData.contentToPrint, 'ascii'));
-					printer.end();
-                    response.writeHead(200, {"Content-Type": "text/plain"});
+		    printer.end();
                 }
             } else {
                 response.writeHead(503, {"Content-Type": "text/plain"});
                 console.log('No or invalid auth token');
             }
-
-            response.end();
         });
 
 }).listen(9098);
